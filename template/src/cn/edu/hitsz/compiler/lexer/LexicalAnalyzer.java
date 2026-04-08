@@ -1,9 +1,10 @@
 package cn.edu.hitsz.compiler.lexer;
 
-import cn.edu.hitsz.compiler.NotImplementedException;
 import cn.edu.hitsz.compiler.symtab.SymbolTable;
 import cn.edu.hitsz.compiler.utils.FileUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.StreamSupport;
 
 /**
@@ -16,6 +17,8 @@ import java.util.stream.StreamSupport;
  */
 public class LexicalAnalyzer {
     private final SymbolTable symbolTable;
+    private String sourceCode;
+    private List<Token> tokens;
 
     public LexicalAnalyzer(SymbolTable symbolTable) {
         this.symbolTable = symbolTable;
@@ -31,7 +34,7 @@ public class LexicalAnalyzer {
         // TODO: 词法分析前的缓冲区实现
         // 可自由实现各类缓冲区
         // 或直接采用完整读入方法
-        throw new NotImplementedException();
+        sourceCode = FileUtils.readFile(path);
     }
 
     /**
@@ -40,7 +43,60 @@ public class LexicalAnalyzer {
      */
     public void run() {
         // TODO: 自动机实现的词法分析过程
-        throw new NotImplementedException();
+        
+        tokens = new ArrayList<Token>();
+        int pos = 0;
+        while (pos < sourceCode.length()) {
+            char c = sourceCode.charAt(pos);
+            if (Character.isWhitespace(c)) {
+                pos++;
+                continue;
+            }
+
+            if (Character.isLetter(c)) {
+                StringBuilder sb = new StringBuilder();
+                while (pos < sourceCode.length() && Character.isLetterOrDigit(sourceCode.charAt(pos))) {
+                    sb.append(sourceCode.charAt(pos));
+                    pos++;
+                }
+                String word = sb.toString();
+
+                if (TokenKind.isAllowed(word)) {
+                    tokens.add(Token.simple(word));
+                } else {
+                    if (!symbolTable.has(word)) {
+                        symbolTable.add(word);
+                    }
+                    tokens.add(Token.normal("id", word));
+                }
+                continue;
+            }
+
+            if (Character.isDigit(c)) {
+                StringBuilder sb = new StringBuilder();
+                while (pos < sourceCode.length() && Character.isDigit(sourceCode.charAt(pos))) {
+                    sb.append(sourceCode.charAt(pos));
+                    pos++;
+                }
+                tokens.add(Token.normal("IntConst", sb.toString()));
+                continue;
+            }
+
+            switch (c) {
+                case '+' -> tokens.add(Token.simple("+"));
+                case '-' -> tokens.add(Token.simple("-"));
+                case '*' -> tokens.add(Token.simple("*"));
+                case '/' -> tokens.add(Token.simple("/"));
+                case '(' -> tokens.add(Token.simple("("));
+                case ')' -> tokens.add(Token.simple(")"));
+                case ';' -> tokens.add(Token.simple("Semicolon"));
+                case '=' -> tokens.add(Token.simple("="));
+                case ',' -> tokens.add(Token.simple(","));
+                default -> throw new RuntimeException("Unexpected character: " + c);
+            }
+            pos++;
+        }
+        tokens.add(Token.eof());
     }
 
     /**
@@ -53,7 +109,7 @@ public class LexicalAnalyzer {
         // 词法分析过程可以使用 Stream 或 Iterator 实现按需分析
         // 亦可以直接分析完整个文件
         // 总之实现过程能转化为一列表即可
-        throw new NotImplementedException();
+        return tokens;
     }
 
     public void dumpTokens(String path) {
